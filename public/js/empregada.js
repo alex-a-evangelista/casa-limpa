@@ -137,7 +137,7 @@ async function carregarTarefas() {
                         <div class="task-info">
                             <div class="task-name">${t.atividade_nome}</div>
                             <div class="task-room">${info.icone} ${comodo}</div>
-                            ${temLembrete ? '<div class="task-room text-warning">⚠️ Tem recado do patrão</div>' : ''}
+                            ${temLembrete ? '<div class="task-room text-warning">⚠️ Tem recado dos moradores</div>' : ''}
                             ${t.observacao_empregada ? `<div class="task-room">💬 "${t.observacao_empregada}"</div>` : ''}
                             ${naoFeita ? `<div class="motivo-card">❌ ${t.motivo_nao_feita}</div>` : ''}
                         </div>
@@ -202,7 +202,7 @@ async function abrirTarefa(execucaoId, atividadeId, nome, descricao, concluida, 
     const lemEl = document.getElementById('modalLembretes');
 
     if (lembretes.length > 0) {
-        let html = '<div class="mb-2" style="font-weight:600;color:var(--warning)">⚠️ Recados do Patrão:</div>';
+        let html = '<div class="mb-2" style="font-weight:600;color:var(--warning)">⚠️ Recados dos Moradores:</div>';
         lembretes.forEach(l => {
             html += `
                 <div class="lembrete-card">

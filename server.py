@@ -217,18 +217,13 @@ def init_db():
 
         # Inserir cômodos padrão se tabela vazia
         row = db_fetchone(conn, "SELECT COUNT(*) as total FROM comodos")
-        # Migração: substituir cômodos antigos pelos novos (se ainda são os 8 padrões)
-        if row['total'] == 8:
-            antigos = db_fetchall(conn, "SELECT nome FROM comodos ORDER BY nome")
-            nomes_antigos = sorted([r['nome'] for r in antigos])
-            padrao_antigo = sorted(['Sala', 'Cozinha', 'Banheiro', 'Quarto', 'Lavanderia', 'Escritório', 'Varanda', 'Área de Serviço'])
-            if nomes_antigos == padrao_antigo:
-                # Verifica se não tem atividades vinculadas
-                atv = db_fetchone(conn, "SELECT COUNT(*) as total FROM atividades")
-                if atv['total'] == 0:
-                    db_execute(conn, "DELETE FROM comodos")
-                    conn.commit()
-                    row = {'total': 0}  # Forçar re-inserção
+        # Migração: substituir cômodos antigos pelos novos (se não tem 26 cômodos)
+        if row['total'] != 26:
+            atv = db_fetchone(conn, "SELECT COUNT(*) as total FROM atividades")
+            if atv['total'] == 0:
+                db_execute(conn, "DELETE FROM comodos")
+                conn.commit()
+                row = {'total': 0}
 
         if row['total'] == 0:
             comodos_padrao = [
