@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Casa Limpa - Empregada</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="app-header">
+            <h1>🧹 Minhas Tarefas</h1>
+            <a href="/" class="btn-voltar">← Sair</a>
+        </div>
+
+        <!-- Data de hoje -->
+        <div class="date-nav">
+            <span class="date-display" id="dateDisplay"></span>
+        </div>
+
+        <!-- Conteúdo -->
+        <div class="content">
+            <!-- Resumo -->
+            <div id="resumo" class="stats-grid mb-2"></div>
+
+            <!-- Lista de tarefas -->
+            <div id="listaTarefas"></div>
+
+            <!-- Vazio -->
+            <div id="emptyState" class="empty-state hidden">
+                <div class="empty-icon">📋</div>
+                <p>Nenhuma tarefa para hoje.<br>Aguarde o patrão cadastrar as atividades.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalhes da tarefa -->
+    <div class="modal-overlay" id="modalTarefa">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTarefaTitulo">Tarefa</h2>
+                <button class="modal-close" onclick="fecharModal('modalTarefa')">✕</button>
+            </div>
+
+            <!-- Lembretes/Recados do patrão -->
+            <div id="modalLembretes"></div>
+
+            <!-- Descrição -->
+            <div id="modalDescricao" class="mb-2"></div>
+
+            <!-- Observação da empregada -->
+            <div class="form-group">
+                <label>Observação (opcional)</label>
+                <textarea class="form-control" id="modalObservacao" placeholder="Alguma observação? Ex: Faltou produto de limpeza..."></textarea>
+            </div>
+
+            <input type="hidden" id="modalExecucaoId">
+
+            <button class="btn btn-success btn-block" id="btnConcluir" onclick="concluirTarefa()">
+                ✅ Marcar como Feita
+            </button>
+            <button class="btn btn-outline btn-block mt-1 hidden" id="btnDesfazer" onclick="desfazerTarefa()">
+                ↩️ Desfazer
+            </button>
+        </div>
+    </div>
+
+    <script src="/js/empregada.js"></script>
+</body>
+</html>

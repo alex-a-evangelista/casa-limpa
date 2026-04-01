@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Casa Limpa - Patrão</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="app-header">
+            <h1>👔 Patrão</h1>
+            <a href="/" class="btn-voltar">← Sair</a>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="tarefas-dia">📋 Hoje</button>
+            <button class="tab" data-tab="gerenciar">⚙️ Atividades</button>
+            <button class="tab" data-tab="historico">📊 Histórico</button>
+        </div>
+
+        <!-- Navegação de data -->
+        <div class="date-nav" id="dateNav">
+            <button onclick="mudarDia(-1)">◀</button>
+            <span class="date-display" id="dateDisplay"></span>
+            <button onclick="mudarDia(1)">▶</button>
+        </div>
+
+        <!-- Conteúdo -->
+        <div class="content">
+
+            <!-- ABA: Tarefas do dia -->
+            <div class="tab-content active" id="tarefas-dia">
+                <div id="statsHoje" class="stats-grid mb-2"></div>
+                <div id="listaTarefasDia"></div>
+            </div>
+
+            <!-- ABA: Gerenciar atividades -->
+            <div class="tab-content" id="gerenciar">
+                <button class="btn btn-primary btn-block mb-2" onclick="abrirModalAtividade()">
+                    + Nova Atividade
+                </button>
+                <div id="listaAtividades"></div>
+            </div>
+
+            <!-- ABA: Histórico -->
+            <div class="tab-content" id="historico">
+                <div id="listaHistorico"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Nova Atividade -->
+    <div class="modal-overlay" id="modalAtividade">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Nova Atividade</h2>
+                <button class="modal-close" onclick="fecharModal('modalAtividade')">✕</button>
+            </div>
+            <form onsubmit="salvarAtividade(event)">
+                <div class="form-group">
+                    <label>Cômodo</label>
+                    <select class="form-control" id="ativComodo" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Nome da Atividade</label>
+                    <input type="text" class="form-control" id="ativNome" placeholder="Ex: Limpar o chão" required>
+                </div>
+                <div class="form-group">
+                    <label>Descrição (opcional)</label>
+                    <textarea class="form-control" id="ativDescricao" placeholder="Detalhes sobre como fazer..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Salvar Atividade</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Avaliar Tarefa -->
+    <div class="modal-overlay" id="modalAvaliar">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Avaliar Tarefa</h2>
+                <button class="modal-close" onclick="fecharModal('modalAvaliar')">✕</button>
+            </div>
+            <div id="avaliarInfo"></div>
+            <form onsubmit="salvarAvaliacao(event)">
+                <input type="hidden" id="avalExecucaoId">
+                <input type="hidden" id="avalAtividadeId">
+                <div class="form-group">
+                    <label>Nota</label>
+                    <div class="stars" id="avalStars">
+                        <span class="star" data-val="1">★</span>
+                        <span class="star" data-val="2">★</span>
+                        <span class="star" data-val="3">★</span>
+                        <span class="star" data-val="4">★</span>
+                        <span class="star" data-val="5">★</span>
+                    </div>
+                    <input type="hidden" id="avalNota" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Comentário</label>
+                    <textarea class="form-control" id="avalComentario" placeholder="O que precisa melhorar?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Foto (opcional)</label>
+                    <div class="foto-input-wrapper">
+                        <button type="button" class="btn btn-outline btn-block">📷 Tirar Foto / Escolher</button>
+                        <input type="file" accept="image/*" capture="environment" id="avalFoto" onchange="previewFoto(this, 'avalFotoPreview')">
+                    </div>
+                    <img id="avalFotoPreview" class="foto-preview">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Salvar Avaliação</button>
+                <button type="button" class="btn btn-outline btn-block mt-1" onclick="abrirLembrete()">
+                    📝 Deixar Recado para Próxima Vez
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Lembrete -->
+    <div class="modal-overlay" id="modalLembrete">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📝 Recado / Lembrete</h2>
+                <button class="modal-close" onclick="fecharModal('modalLembrete')">✕</button>
+            </div>
+            <p class="card-subtitle mb-2">Este recado aparecerá para a empregada na próxima vez que ela for fazer esta atividade.</p>
+            <form onsubmit="salvarLembrete(event)">
+                <input type="hidden" id="lembreteAtividadeId">
+                <div class="form-group">
+                    <label>Mensagem</label>
+                    <textarea class="form-control" id="lembreteMensagem" placeholder="Ex: Prestar atenção atrás do sofá, ficou sujo da última vez..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Foto (opcional)</label>
+                    <div class="foto-input-wrapper">
+                        <button type="button" class="btn btn-outline btn-block">📷 Tirar Foto / Escolher</button>
+                        <input type="file" accept="image/*" capture="environment" id="lembreteFoto" onchange="previewFoto(this, 'lembreteFotoPreview')">
+                    </div>
+                    <img id="lembreteFotoPreview" class="foto-preview">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Enviar Recado</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Avaliações anteriores -->
+    <div class="modal-overlay" id="modalVerAvaliacoes">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Avaliações</h2>
+                <button class="modal-close" onclick="fecharModal('modalVerAvaliacoes')">✕</button>
+            </div>
+            <div id="listaAvaliacoes"></div>
+        </div>
+    </div>
+
+    <script src="/js/patrao.js"></script>
+</body>
+</html>
