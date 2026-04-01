@@ -688,3 +688,58 @@ textarea.form-control {
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
 .hidden { display: none !important; }
+
+/* ─── Dias da semana grid ───────────────────────────────── */
+.dias-semana-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.dia-check {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--gray-100);
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.dia-check input:checked + span,
+.dia-check:has(input:checked) {
+    background: var(--primary-bg);
+    color: var(--primary);
+}
+
+/* ─── Turno badge ───────────────────────────────────────── */
+.turno-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.turno-manha { background: #FEF3C7; color: #92400E; }
+.turno-tarde { background: #DBEAFE; color: #1E40AF; }
+
+/* ─── Motivo não feita ──────────────────────────────────── */
+.motivo-card {
+    background: var(--danger-bg);
+    border-left: 4px solid var(--danger);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 0.6rem 0.75rem;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+}
+
+/* ─── Recorrencia info ──────────────────────────────────── */
+.recorrencia-info {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: 0.15rem;
+}

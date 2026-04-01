@@ -11,7 +11,7 @@
         <!-- Header -->
         <div class="app-header">
             <h1>👔 Patrão</h1>
-            <a href="/" class="btn-voltar">← Sair</a>
+            <a href="#" class="btn-voltar" onclick="sair()">← Sair</a>
         </div>
 
         <!-- Tabs -->
@@ -71,6 +71,32 @@
                 <div class="form-group">
                     <label>Descrição (opcional)</label>
                     <textarea class="form-control" id="ativDescricao" placeholder="Detalhes sobre como fazer..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Turno</label>
+                    <select class="form-control" id="ativTurno">
+                        <option value="qualquer">Qualquer horário</option>
+                        <option value="manha">Manhã</option>
+                        <option value="tarde">Tarde</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:0.5rem">
+                        <input type="checkbox" id="ativRecorrente" onchange="toggleRecorrencia()">
+                        Atividade recorrente (repete em dias específicos)
+                    </label>
+                </div>
+                <div class="form-group hidden" id="diasSemanaGroup">
+                    <label>Em quais dias?</label>
+                    <div class="dias-semana-grid">
+                        <label class="dia-check"><input type="checkbox" value="0"> Seg</label>
+                        <label class="dia-check"><input type="checkbox" value="1"> Ter</label>
+                        <label class="dia-check"><input type="checkbox" value="2"> Qua</label>
+                        <label class="dia-check"><input type="checkbox" value="3"> Qui</label>
+                        <label class="dia-check"><input type="checkbox" value="4"> Sex</label>
+                        <label class="dia-check"><input type="checkbox" value="5"> Sáb</label>
+                        <label class="dia-check"><input type="checkbox" value="6"> Dom</label>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Salvar Atividade</button>
             </form>

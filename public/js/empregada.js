@@ -1,5 +1,41 @@
+// ─── Verificar autenticação ────────────────────────────────
+async function verificarAuth() {
+    try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        if (!data.logado || data.perfil !== 'empregada') {
+            window.location.href = '/';
+            return false;
+        }
+        if (data.trocar_senha) {
+            window.location.href = '/';
+            return false;
+        }
+        return true;
+    } catch(e) {
+        window.location.href = '/';
+        return false;
+    }
+}
+
+async function sair() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+}
+
+// ─── Interceptar erros 401 ────────────────────────────────
+const _fetch = window.fetch;
+window.fetch = async function(...args) {
+    const res = await _fetch(...args);
+    if (res.status === 401 && args[0] !== '/api/auth/status') {
+        window.location.href = '/';
+    }
+    return res;
+};
+
 // ─── Inicialização ─────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!await verificarAuth()) return;
     mostrarDataHoje();
     gerarTarefasDia();
 });
@@ -15,7 +51,6 @@ function mostrarDataHoje() {
 
 // ─── Carregar tarefas ──────────────────────────────────────
 async function gerarTarefasDia() {
-    // Gera as tarefas do dia (caso ainda não existam)
     await fetch('/api/execucoes/gerar', { method: 'POST' });
     carregarTarefas();
 }
@@ -38,10 +73,15 @@ async function carregarTarefas() {
 
     emptyState.classList.add('hidden');
 
-    // Resumo
     const concluidas = tarefas.filter(t => t.concluida).length;
+    const naoFeitas = tarefas.filter(t => !t.concluida && t.motivo_nao_feita).length;
     const total = tarefas.length;
+    const pendentes = total - concluidas - naoFeitas;
     const pct = Math.round((concluidas / total) * 100);
+
+    let msgProgresso = 'Continue assim!';
+    if (pct === 100) msgProgresso = 'Tudo pronto! 🎉';
+    else if (pendentes === 0 && naoFeitas > 0) msgProgresso = 'Tudo registrado!';
 
     resumoEl.innerHTML = `
         <div class="stat-card">
@@ -50,43 +90,61 @@ async function carregarTarefas() {
         </div>
         <div class="stat-card">
             <div class="stat-value">${pct}%</div>
-            <div class="stat-label">${pct === 100 ? 'Tudo pronto! 🎉' : 'Continue assim!'}</div>
+            <div class="stat-label">${msgProgresso}</div>
         </div>
     `;
 
-    // Agrupar por cômodo
-    const porComodo = {};
-    tarefas.forEach(t => {
+    // Agrupar por turno e cômodo
+    const porTurno = { manha: {}, tarde: {}, qualquer: {} };
+    for (const t of tarefas) {
+        const turno = t.atividade_turno || 'qualquer';
         const key = t.comodo_nome;
-        if (!porComodo[key]) porComodo[key] = { icone: t.comodo_icone, tarefas: [] };
-        porComodo[key].tarefas.push(t);
-    });
+        if (!porTurno[turno]) porTurno[turno] = {};
+        if (!porTurno[turno][key]) porTurno[turno][key] = { icone: t.comodo_icone, tarefas: [] };
+        porTurno[turno][key].tarefas.push(t);
+    }
 
-    let html = '';
-    for (const [comodo, info] of Object.entries(porComodo)) {
-        html += `<div class="comodo-section">
-            <div class="comodo-header">${info.icone} ${comodo}</div>`;
-
-        for (const t of info.tarefas) {
-            const doneClass = t.concluida ? 'done' : '';
-            const check = t.concluida ? '✓' : '';
-
-            // Verificar se tem lembretes
+    // Pré-carregar lembretes
+    const lembreteCache = {};
+    for (const t of tarefas) {
+        if (!lembreteCache[t.atividade_id]) {
             const lemRes = await fetch(`/api/lembretes/${t.atividade_id}`);
-            const lembretes = await lemRes.json();
-            const temLembrete = lembretes.length > 0;
-
-            html += `
-                <div class="task-item ${doneClass}" onclick="abrirTarefa(${t.id}, ${t.atividade_id}, '${escapar(t.atividade_nome)}', '${escapar(t.atividade_descricao || '')}', ${t.concluida ? 1 : 0})">
-                    <div class="task-checkbox">${check}</div>
-                    <div class="task-info">
-                        <div class="task-name">${t.atividade_nome}</div>
-                        <div class="task-room">${info.icone} ${comodo}</div>
-                        ${temLembrete ? '<div class="task-room text-warning">⚠️ Tem recado do patrão</div>' : ''}
-                    </div>
-                </div>`;
+            lembreteCache[t.atividade_id] = await lemRes.json();
         }
-        html += '</div>';
+    }
+
+    const turnoLabels = { manha: '☀️ Manhã', tarde: '🌙 Tarde', qualquer: '' };
+    let html = '';
+
+    for (const [turno, comodos] of Object.entries(porTurno)) {
+        if (Object.keys(comodos).length === 0) continue;
+        if (turnoLabels[turno]) {
+            html += `<div style="font-weight:700;font-size:1rem;margin:1rem 0 0.5rem;color:var(--gray-700)">${turnoLabels[turno]}</div>`;
+        }
+        for (const [comodo, info] of Object.entries(comodos)) {
+            html += `<div class="comodo-section">
+                <div class="comodo-header">${info.icone} ${comodo}</div>`;
+
+            for (const t of info.tarefas) {
+                const temLembrete = (lembreteCache[t.atividade_id] || []).length > 0;
+                const doneClass = t.concluida ? 'done' : '';
+                const check = t.concluida ? '✓' : '';
+                const naoFeita = !t.concluida && t.motivo_nao_feita;
+
+                html += `
+                    <div class="task-item ${doneClass}" onclick="abrirTarefa(${t.id}, ${t.atividade_id}, '${escapar(t.atividade_nome)}', '${escapar(t.atividade_descricao || '')}', ${t.concluida ? 1 : 0}, '${escapar(t.atividade_turno || 'qualquer')}', '${escapar(t.observacao_empregada || '')}', '${escapar(t.motivo_nao_feita || '')}')">
+                        <div class="task-checkbox" ${naoFeita ? 'style="background:var(--danger);border-color:var(--danger);color:white"' : ''}>${naoFeita ? '✕' : check}</div>
+                        <div class="task-info">
+                            <div class="task-name">${t.atividade_nome}</div>
+                            <div class="task-room">${info.icone} ${comodo}</div>
+                            ${temLembrete ? '<div class="task-room text-warning">⚠️ Tem recado do patrão</div>' : ''}
+                            ${t.observacao_empregada ? `<div class="task-room">💬 "${t.observacao_empregada}"</div>` : ''}
+                            ${naoFeita ? `<div class="motivo-card">❌ ${t.motivo_nao_feita}</div>` : ''}
+                        </div>
+                    </div>`;
+            }
+            html += '</div>';
+        }
     }
 
     container.innerHTML = html;
@@ -97,10 +155,23 @@ function escapar(str) {
 }
 
 // ─── Abrir tarefa ──────────────────────────────────────────
-async function abrirTarefa(execucaoId, atividadeId, nome, descricao, concluida) {
+async function abrirTarefa(execucaoId, atividadeId, nome, descricao, concluida, turno, obsExistente, motivoExistente) {
     document.getElementById('modalTarefaTitulo').textContent = nome;
     document.getElementById('modalExecucaoId').value = execucaoId;
-    document.getElementById('modalObservacao').value = '';
+    document.getElementById('modalAtividadeId').value = atividadeId;
+    document.getElementById('modalObservacao').value = obsExistente || '';
+    document.getElementById('motivoNaoFeita').value = motivoExistente || '';
+    document.getElementById('motivoNaoFeitaGroup').classList.add('hidden');
+
+    // Turno
+    const turnoEl = document.getElementById('modalTurno');
+    if (turno && turno !== 'qualquer') {
+        const turnoLabel = turno === 'manha' ? '☀️ Manhã' : '🌙 Tarde';
+        const turnoClass = turno === 'manha' ? 'turno-manha' : 'turno-tarde';
+        turnoEl.innerHTML = `<span class="turno-badge ${turnoClass}">${turnoLabel}</span>`;
+    } else {
+        turnoEl.innerHTML = '';
+    }
 
     // Descrição
     const descEl = document.getElementById('modalDescricao');
@@ -112,12 +183,16 @@ async function abrirTarefa(execucaoId, atividadeId, nome, descricao, concluida) 
 
     // Botões
     const btnConcluir = document.getElementById('btnConcluir');
+    const btnNaoFeita = document.getElementById('btnNaoFeita');
     const btnDesfazer = document.getElementById('btnDesfazer');
-    if (concluida) {
+
+    if (concluida || motivoExistente) {
         btnConcluir.classList.add('hidden');
+        btnNaoFeita.classList.add('hidden');
         btnDesfazer.classList.remove('hidden');
     } else {
         btnConcluir.classList.remove('hidden');
+        btnNaoFeita.classList.remove('hidden');
         btnDesfazer.classList.add('hidden');
     }
 
@@ -144,7 +219,7 @@ async function abrirTarefa(execucaoId, atividadeId, nome, descricao, concluida) 
     abrirModal('modalTarefa');
 }
 
-// ─── Concluir / Desfazer tarefa ────────────────────────────
+// ─── Concluir tarefa ───────────────────────────────────────
 async function concluirTarefa() {
     const id = document.getElementById('modalExecucaoId').value;
     const observacao = document.getElementById('modalObservacao').value;
@@ -159,6 +234,44 @@ async function concluirTarefa() {
     carregarTarefas();
 }
 
+// ─── Não conseguiu fazer ───────────────────────────────────
+function mostrarMotivoNaoFeita() {
+    document.getElementById('motivoNaoFeitaGroup').classList.remove('hidden');
+    document.getElementById('motivoNaoFeita').focus();
+}
+
+async function registrarNaoFeita() {
+    const id = document.getElementById('modalExecucaoId').value;
+    const motivo = document.getElementById('motivoNaoFeita').value;
+
+    if (!motivo.trim()) {
+        alert('Por favor, explique o motivo');
+        return;
+    }
+
+    // Também salva a observação geral se tiver
+    const observacao = document.getElementById('modalObservacao').value;
+    if (observacao) {
+        await fetch(`/api/execucoes/${id}/concluir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observacao })
+        });
+        // Depois marca como não feita
+        await fetch(`/api/execucoes/${id}/desfazer`, { method: 'POST' });
+    }
+
+    await fetch(`/api/execucoes/${id}/nao-feita`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo })
+    });
+
+    fecharModal('modalTarefa');
+    carregarTarefas();
+}
+
+// ─── Desfazer ──────────────────────────────────────────────
 async function desfazerTarefa() {
     const id = document.getElementById('modalExecucaoId').value;
     await fetch(`/api/execucoes/${id}/desfazer`, { method: 'POST' });
@@ -175,7 +288,6 @@ function fecharModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-// Fechar modal ao clicar fora
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) overlay.classList.remove('active');

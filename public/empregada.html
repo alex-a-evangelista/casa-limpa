@@ -11,7 +11,7 @@
         <!-- Header -->
         <div class="app-header">
             <h1>🧹 Minhas Tarefas</h1>
-            <a href="/" class="btn-voltar">← Sair</a>
+            <a href="#" class="btn-voltar" onclick="sair()">← Sair</a>
         </div>
 
         <!-- Data de hoje -->
@@ -43,6 +43,9 @@
                 <button class="modal-close" onclick="fecharModal('modalTarefa')">✕</button>
             </div>
 
+            <!-- Turno -->
+            <div id="modalTurno" class="mb-1"></div>
+
             <!-- Lembretes/Recados do patrão -->
             <div id="modalLembretes"></div>
 
@@ -52,14 +55,30 @@
             <!-- Observação da empregada -->
             <div class="form-group">
                 <label>Observação (opcional)</label>
-                <textarea class="form-control" id="modalObservacao" placeholder="Alguma observação? Ex: Faltou produto de limpeza..."></textarea>
+                <textarea class="form-control" id="modalObservacao" placeholder="Ex: Faltou produto de limpeza, usei outro..."></textarea>
             </div>
 
             <input type="hidden" id="modalExecucaoId">
+            <input type="hidden" id="modalAtividadeId">
 
             <button class="btn btn-success btn-block" id="btnConcluir" onclick="concluirTarefa()">
                 ✅ Marcar como Feita
             </button>
+            <button class="btn btn-danger btn-block mt-1" id="btnNaoFeita" onclick="mostrarMotivoNaoFeita()">
+                ❌ Não Consegui Fazer
+            </button>
+
+            <!-- Motivo não feita -->
+            <div class="hidden mt-1" id="motivoNaoFeitaGroup">
+                <div class="form-group">
+                    <label>Por que não conseguiu?</label>
+                    <textarea class="form-control" id="motivoNaoFeita" placeholder="Ex: Faltou produto de limpeza, equipamento quebrado..."></textarea>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="registrarNaoFeita()">
+                    Enviar Motivo
+                </button>
+            </div>
+
             <button class="btn btn-outline btn-block mt-1 hidden" id="btnDesfazer" onclick="desfazerTarefa()">
                 ↩️ Desfazer
             </button>

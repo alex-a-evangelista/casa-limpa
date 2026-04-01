@@ -2,15 +2,53 @@
 let dataAtual = new Date();
 let notaSelecionada = 0;
 
+const DIAS_NOMES = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+const TURNOS = { qualquer: 'Qualquer horário', manha: '☀️ Manhã', tarde: '🌙 Tarde' };
+
+// ─── Verificar autenticação ────────────────────────────────
+async function verificarAuth() {
+    try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        if (!data.logado || data.perfil !== 'patrao') {
+            window.location.href = '/';
+            return false;
+        }
+        if (data.trocar_senha) {
+            window.location.href = '/';
+            return false;
+        }
+        return true;
+    } catch(e) {
+        window.location.href = '/';
+        return false;
+    }
+}
+
+async function sair() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+}
+
+// ─── Interceptar erros 401 ────────────────────────────────
+const _fetch = window.fetch;
+window.fetch = async function(...args) {
+    const res = await _fetch(...args);
+    if (res.status === 401 && args[0] !== '/api/auth/status') {
+        window.location.href = '/';
+    }
+    return res;
+};
+
 // ─── Inicialização ─────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!await verificarAuth()) return;
     setupTabs();
     setupStars();
     atualizarData();
     carregarTarefasDia();
     carregarAtividades();
     carregarHistorico();
-    // Gerar tarefas do dia automaticamente
     fetch('/api/execucoes/gerar', { method: 'POST' });
 });
 
@@ -23,13 +61,8 @@ function setupTabs() {
             tab.classList.add('active');
             document.getElementById(tab.dataset.tab).classList.add('active');
 
-            // Mostrar/esconder navegação de data
             const dateNav = document.getElementById('dateNav');
-            if (tab.dataset.tab === 'tarefas-dia') {
-                dateNav.style.display = 'flex';
-            } else {
-                dateNav.style.display = 'none';
-            }
+            dateNav.style.display = tab.dataset.tab === 'tarefas-dia' ? 'flex' : 'none';
         });
     });
 }
@@ -75,6 +108,7 @@ async function carregarTarefasDia() {
     }
 
     const concluidas = tarefas.filter(t => t.concluida).length;
+    const naoFeitas = tarefas.filter(t => !t.concluida && t.motivo_nao_feita).length;
     const total = tarefas.length;
     const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
@@ -89,37 +123,49 @@ async function carregarTarefasDia() {
         </div>
     `;
 
-    // Agrupar por cômodo
-    const porComodo = {};
+    // Agrupar por turno e cômodo
+    const porTurno = { manha: {}, tarde: {}, qualquer: {} };
     tarefas.forEach(t => {
+        const turno = t.atividade_turno || 'qualquer';
         const key = t.comodo_nome;
-        if (!porComodo[key]) porComodo[key] = { icone: t.comodo_icone, tarefas: [] };
-        porComodo[key].tarefas.push(t);
+        if (!porTurno[turno]) porTurno[turno] = {};
+        if (!porTurno[turno][key]) porTurno[turno][key] = { icone: t.comodo_icone, tarefas: [] };
+        porTurno[turno][key].tarefas.push(t);
     });
 
     let html = '';
-    for (const [comodo, info] of Object.entries(porComodo)) {
-        html += `<div class="comodo-section">
-            <div class="comodo-header">${info.icone} ${comodo}</div>`;
-        info.tarefas.forEach(t => {
-            const doneClass = t.concluida ? 'done' : '';
-            const check = t.concluida ? '✓' : '';
-            html += `
-                <div class="task-item ${doneClass}">
-                    <div class="task-checkbox">${check}</div>
-                    <div class="task-info">
-                        <div class="task-name">${t.atividade_nome}</div>
-                        ${t.hora_conclusao ? `<div class="task-room">Feita às ${t.hora_conclusao.split(' ')[1]}</div>` : ''}
-                        ${t.observacao_empregada ? `<div class="task-room">💬 "${t.observacao_empregada}"</div>` : ''}
-                    </div>
-                    <div class="task-actions">
-                        ${t.concluida ? `
-                            <button class="btn btn-sm btn-primary" onclick="abrirAvaliar(${t.id}, ${t.atividade_id || 0}, '${escapar(t.atividade_nome)}', '${escapar(t.comodo_nome)}')">⭐ Avaliar</button>
-                        ` : ''}
-                    </div>
-                </div>`;
-        });
-        html += '</div>';
+    const turnoLabels = { manha: '☀️ Manhã', tarde: '🌙 Tarde', qualquer: '' };
+
+    for (const [turno, comodos] of Object.entries(porTurno)) {
+        if (Object.keys(comodos).length === 0) continue;
+        if (turnoLabels[turno]) {
+            html += `<div style="font-weight:700;font-size:1rem;margin:1rem 0 0.5rem;color:var(--gray-700)">${turnoLabels[turno]}</div>`;
+        }
+        for (const [comodo, info] of Object.entries(comodos)) {
+            html += `<div class="comodo-section">
+                <div class="comodo-header">${info.icone} ${comodo}</div>`;
+            info.tarefas.forEach(t => {
+                const doneClass = t.concluida ? 'done' : '';
+                const check = t.concluida ? '✓' : '';
+                const hora = t.hora_conclusao ? (t.hora_conclusao.includes('T') ? t.hora_conclusao.split('T')[1].substring(0,5) : t.hora_conclusao.split(' ')[1]) : '';
+                html += `
+                    <div class="task-item ${doneClass}">
+                        <div class="task-checkbox">${check}</div>
+                        <div class="task-info">
+                            <div class="task-name">${t.atividade_nome}</div>
+                            ${hora ? `<div class="task-room">Feita às ${hora}</div>` : ''}
+                            ${t.observacao_empregada ? `<div class="task-room">💬 "${t.observacao_empregada}"</div>` : ''}
+                            ${t.motivo_nao_feita ? `<div class="motivo-card">❌ Não feita: "${t.motivo_nao_feita}"</div>` : ''}
+                        </div>
+                        <div class="task-actions">
+                            ${t.concluida ? `
+                                <button class="btn btn-sm btn-primary" onclick="abrirAvaliar(${t.id}, ${t.atividade_id || 0}, '${escapar(t.atividade_nome)}', '${escapar(t.comodo_nome)}')">⭐ Avaliar</button>
+                            ` : ''}
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+        }
     }
 
     container.innerHTML = html;
@@ -151,7 +197,6 @@ function abrirAvaliar(execucaoId, atividadeId, nome, comodo) {
             <div class="card-subtitle">${comodo}</div>
         </div>`;
 
-    // Reset
     notaSelecionada = 0;
     document.getElementById('avalNota').value = 0;
     document.getElementById('avalComentario').value = '';
@@ -159,9 +204,7 @@ function abrirAvaliar(execucaoId, atividadeId, nome, comodo) {
     document.getElementById('avalFotoPreview').classList.remove('visible');
     document.querySelectorAll('#avalStars .star').forEach(s => s.classList.remove('active'));
 
-    // Carregar avaliações anteriores
     carregarAvaliacoes(execucaoId);
-
     abrirModal('modalAvaliar');
 }
 
@@ -242,6 +285,12 @@ async function salvarLembrete(e) {
     alert('Recado enviado! Ela verá na próxima vez.');
 }
 
+// ─── Recorrência ──────────────────────────────────────────
+function toggleRecorrencia() {
+    const checked = document.getElementById('ativRecorrente').checked;
+    document.getElementById('diasSemanaGroup').classList.toggle('hidden', !checked);
+}
+
 // ─── Gerenciar Atividades ──────────────────────────────────
 async function carregarAtividades() {
     const res = await fetch('/api/atividades');
@@ -258,7 +307,6 @@ async function carregarAtividades() {
         return;
     }
 
-    // Agrupar por cômodo
     const porComodo = {};
     atividades.forEach(a => {
         const key = a.comodo_nome;
@@ -271,11 +319,23 @@ async function carregarAtividades() {
         html += `<div class="comodo-section">
             <div class="comodo-header">${info.icone} ${comodo}</div>`;
         info.atividades.forEach(a => {
+            const turnoHtml = a.turno && a.turno !== 'qualquer'
+                ? `<span class="turno-badge ${a.turno === 'manha' ? 'turno-manha' : 'turno-tarde'}">${a.turno === 'manha' ? '☀️ Manhã' : '🌙 Tarde'}</span>`
+                : '';
+            let recHtml = '';
+            if (a.recorrente && a.dias_semana) {
+                const diasNums = a.dias_semana.split(',');
+                const diasTexto = diasNums.map(d => DIAS_NOMES[parseInt(d)] || d).join(', ');
+                recHtml = `<div class="recorrencia-info">🔁 ${diasTexto}</div>`;
+            } else if (!a.recorrente) {
+                recHtml = `<div class="recorrencia-info">📌 Todos os dias</div>`;
+            }
             html += `
-                <div class="card" style="display:flex;align-items:center;justify-content:space-between">
-                    <div>
-                        <div class="card-title">${a.nome}</div>
+                <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
+                    <div style="flex:1">
+                        <div class="card-title">${a.nome} ${turnoHtml}</div>
                         ${a.descricao ? `<div class="card-subtitle">${a.descricao}</div>` : ''}
+                        ${recHtml}
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="removerAtividade(${a.id}, '${escapar(a.nome)}')">🗑️</button>
                 </div>`;
@@ -287,7 +347,6 @@ async function carregarAtividades() {
 }
 
 async function abrirModalAtividade() {
-    // Carregar cômodos
     const res = await fetch('/api/comodos');
     const comodos = await res.json();
     const select = document.getElementById('ativComodo');
@@ -295,23 +354,42 @@ async function abrirModalAtividade() {
 
     document.getElementById('ativNome').value = '';
     document.getElementById('ativDescricao').value = '';
+    document.getElementById('ativTurno').value = 'qualquer';
+    document.getElementById('ativRecorrente').checked = false;
+    document.getElementById('diasSemanaGroup').classList.add('hidden');
+    document.querySelectorAll('#diasSemanaGroup input[type="checkbox"]').forEach(c => c.checked = false);
     abrirModal('modalAtividade');
 }
 
 async function salvarAtividade(e) {
     e.preventDefault();
+    const recorrente = document.getElementById('ativRecorrente').checked;
+    const diasSemana = [];
+    if (recorrente) {
+        document.querySelectorAll('#diasSemanaGroup input[type="checkbox"]:checked').forEach(c => {
+            diasSemana.push(c.value);
+        });
+        if (diasSemana.length === 0) {
+            alert('Selecione pelo menos um dia da semana');
+            return;
+        }
+    }
+
     await fetch('/api/atividades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             comodo_id: parseInt(document.getElementById('ativComodo').value),
             nome: document.getElementById('ativNome').value,
-            descricao: document.getElementById('ativDescricao').value
+            descricao: document.getElementById('ativDescricao').value,
+            turno: document.getElementById('ativTurno').value,
+            recorrente: recorrente,
+            dias_semana: diasSemana
         })
     });
     fecharModal('modalAtividade');
     carregarAtividades();
-    alert('Atividade criada! Ela aparecerá nas tarefas de amanhã.');
+    alert('Atividade criada!');
 }
 
 async function removerAtividade(id, nome) {
@@ -369,7 +447,6 @@ function fecharModal(id) {
     document.getElementById(id).classList.remove('active');
 }
 
-// Fechar modal ao clicar fora
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) overlay.classList.remove('active');

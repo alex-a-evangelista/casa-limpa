@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Casa Limpa</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
-        <div class="welcome-screen">
+        <!-- Tela 1: Escolha de perfil -->
+        <div class="welcome-screen" id="telaEscolha">
             <div class="logo">🏠</div>
             <h1>Casa Limpa</h1>
             <p class="subtitle">Gerenciador de Atividades Domésticas</p>
@@ -18,19 +18,197 @@
             <div class="role-selection">
                 <p class="role-label">Quem é você?</p>
 
-                <a href="/patrao.html" class="role-card patrao">
+                <div class="role-card patrao" onclick="escolherPerfil('patrao')">
                     <div class="role-icon">👔</div>
                     <div class="role-name">Patrão / Patroa</div>
                     <div class="role-desc">Gerenciar tarefas, avaliar e deixar recados</div>
-                </a>
+                </div>
 
-                <a href="/empregada.html" class="role-card empregada">
+                <div class="role-card empregada" onclick="escolherPerfil('empregada')">
                     <div class="role-icon">🧹</div>
                     <div class="role-name">Empregada</div>
                     <div class="role-desc">Ver tarefas do dia, marcar concluídas</div>
-                </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela 2: Login com senha -->
+        <div class="welcome-screen hidden" id="telaLogin">
+            <div class="logo" id="loginIcon">🔒</div>
+            <h1 id="loginTitulo">Entrar</h1>
+            <p class="subtitle" id="loginSubtitulo"></p>
+
+            <div class="role-selection" style="max-width:320px">
+                <div id="loginErro" class="lembrete-card hidden" style="border-left-color:var(--danger);background:var(--danger-bg);margin-bottom:1rem">
+                    <div class="lembrete-msg" id="loginErroMsg"></div>
+                </div>
+
+                <div class="form-group">
+                    <label style="color:white">Senha</label>
+                    <input type="password" class="form-control" id="loginSenha" placeholder="Digite sua senha"
+                           onkeydown="if(event.key==='Enter')fazerLogin()" autofocus>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="fazerLogin()" style="background:white;color:var(--primary)">
+                    Entrar
+                </button>
+                <button class="btn btn-block mt-1" onclick="voltarEscolha()" style="color:white;background:transparent;border:1px solid rgba(255,255,255,0.3)">
+                    ← Voltar
+                </button>
+            </div>
+        </div>
+
+        <!-- Tela 3: Trocar senha obrigatória -->
+        <div class="welcome-screen hidden" id="telaTrocarSenha">
+            <div class="logo">🔐</div>
+            <h1>Trocar Senha</h1>
+            <p class="subtitle">Por segurança, crie uma nova senha pessoal</p>
+
+            <div class="role-selection" style="max-width:320px">
+                <div id="trocarErro" class="lembrete-card hidden" style="border-left-color:var(--danger);background:var(--danger-bg);margin-bottom:1rem">
+                    <div class="lembrete-msg" id="trocarErroMsg"></div>
+                </div>
+
+                <div class="form-group">
+                    <label style="color:white">Senha atual</label>
+                    <input type="password" class="form-control" id="senhaAtual" placeholder="Senha que você usou para entrar">
+                </div>
+                <div class="form-group">
+                    <label style="color:white">Nova senha (mínimo 4 caracteres)</label>
+                    <input type="password" class="form-control" id="senhaNova" placeholder="Crie uma nova senha">
+                </div>
+                <div class="form-group">
+                    <label style="color:white">Confirme a nova senha</label>
+                    <input type="password" class="form-control" id="senhaConfirma" placeholder="Digite novamente"
+                           onkeydown="if(event.key==='Enter')trocarSenha()">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="trocarSenha()" style="background:white;color:var(--primary)">
+                    Salvar Nova Senha
+                </button>
             </div>
         </div>
     </div>
+
+    <script>
+        let perfilEscolhido = '';
+        let senhaDigitada = '';
+
+        // Verificar se já está logado
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                if (data.logado) {
+                    if (data.trocar_senha) {
+                        perfilEscolhido = data.perfil;
+                        mostrarTela('telaTrocarSenha');
+                    } else {
+                        window.location.href = data.perfil === 'patrao' ? '/patrao.html' : '/empregada.html';
+                    }
+                }
+            } catch(e) {}
+        });
+
+        function mostrarTela(id) {
+            document.getElementById('telaEscolha').classList.add('hidden');
+            document.getElementById('telaLogin').classList.add('hidden');
+            document.getElementById('telaTrocarSenha').classList.add('hidden');
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function escolherPerfil(perfil) {
+            perfilEscolhido = perfil;
+            const nome = perfil === 'patrao' ? 'Patrão / Patroa' : 'Empregada';
+            const icone = perfil === 'patrao' ? '👔' : '🧹';
+            document.getElementById('loginIcon').textContent = icone;
+            document.getElementById('loginTitulo').textContent = nome;
+            document.getElementById('loginSubtitulo').textContent = 'Digite sua senha para entrar';
+            document.getElementById('loginSenha').value = '';
+            document.getElementById('loginErro').classList.add('hidden');
+            mostrarTela('telaLogin');
+            setTimeout(() => document.getElementById('loginSenha').focus(), 300);
+        }
+
+        function voltarEscolha() {
+            mostrarTela('telaEscolha');
+        }
+
+        async function fazerLogin() {
+            const senha = document.getElementById('loginSenha').value;
+            if (!senha) return;
+
+            senhaDigitada = senha;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ perfil: perfilEscolhido, senha })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    document.getElementById('loginErroMsg').textContent = data.erro || 'Senha incorreta';
+                    document.getElementById('loginErro').classList.remove('hidden');
+                    document.getElementById('loginSenha').value = '';
+                    document.getElementById('loginSenha').focus();
+                    return;
+                }
+
+                if (data.trocar_senha) {
+                    document.getElementById('senhaAtual').value = senhaDigitada;
+                    mostrarTela('telaTrocarSenha');
+                    document.getElementById('senhaNova').focus();
+                } else {
+                    window.location.href = perfilEscolhido === 'patrao' ? '/patrao.html' : '/empregada.html';
+                }
+            } catch(e) {
+                document.getElementById('loginErroMsg').textContent = 'Erro de conexão. Tente novamente.';
+                document.getElementById('loginErro').classList.remove('hidden');
+            }
+        }
+
+        async function trocarSenha() {
+            const atual = document.getElementById('senhaAtual').value;
+            const nova = document.getElementById('senhaNova').value;
+            const confirma = document.getElementById('senhaConfirma').value;
+
+            if (nova.length < 4) {
+                mostrarErroTroca('A nova senha deve ter pelo menos 4 caracteres');
+                return;
+            }
+            if (nova !== confirma) {
+                mostrarErroTroca('As senhas não conferem. Digite novamente.');
+                return;
+            }
+            if (nova === '1234') {
+                mostrarErroTroca('Escolha uma senha diferente da inicial (1234)');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/trocar-senha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ senha_atual: atual, senha_nova: nova })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    mostrarErroTroca(data.erro || 'Erro ao trocar senha');
+                    return;
+                }
+
+                alert('Senha alterada com sucesso! Não esqueça sua nova senha.');
+                window.location.href = perfilEscolhido === 'patrao' ? '/patrao.html' : '/empregada.html';
+            } catch(e) {
+                mostrarErroTroca('Erro de conexão. Tente novamente.');
+            }
+        }
+
+        function mostrarErroTroca(msg) {
+            document.getElementById('trocarErroMsg').textContent = msg;
+            document.getElementById('trocarErro').classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
