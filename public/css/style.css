@@ -74,7 +74,13 @@ body {
 .subtitle {
     opacity: 0.85;
     font-size: 0.95rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.version-info {
+    opacity: 0.6;
+    font-size: 0.75rem;
+    margin-bottom: 2rem;
 }
 
 .role-label {
