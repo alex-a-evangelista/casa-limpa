@@ -217,11 +217,32 @@ def init_db():
 
         # Inserir cômodos padrão se tabela vazia
         row = db_fetchone(conn, "SELECT COUNT(*) as total FROM comodos")
+        # Migração: substituir cômodos antigos pelos novos (se ainda são os 8 padrões)
+        if row['total'] == 8:
+            antigos = db_fetchall(conn, "SELECT nome FROM comodos ORDER BY nome")
+            nomes_antigos = sorted([r['nome'] for r in antigos])
+            padrao_antigo = sorted(['Sala', 'Cozinha', 'Banheiro', 'Quarto', 'Lavanderia', 'Escritório', 'Varanda', 'Área de Serviço'])
+            if nomes_antigos == padrao_antigo:
+                # Verifica se não tem atividades vinculadas
+                atv = db_fetchone(conn, "SELECT COUNT(*) as total FROM atividades")
+                if atv['total'] == 0:
+                    db_execute(conn, "DELETE FROM comodos")
+                    conn.commit()
+                    row = {'total': 0}  # Forçar re-inserção
+
         if row['total'] == 0:
             comodos_padrao = [
-                ('Sala', '🛋️'), ('Cozinha', '🍳'), ('Banheiro', '🚿'),
-                ('Quarto', '🛏️'), ('Lavanderia', '👕'), ('Escritório', '💻'),
-                ('Varanda', '🌿'), ('Área de Serviço', '🧹')
+                ('Suíte Master', '🛏️'), ('WC Suíte Master', '🚿'), ('Closet Suíte Master', '👔'),
+                ('Quarto Léo', '🛏️'), ('WC Léo', '🚿'),
+                ('Quarto Dudu', '🛏️'), ('WC Dudu', '🚿'),
+                ('Sala Íntima', '🛋️'), ('Escada', '🪜'), ('Sala de Estar', '🛋️'),
+                ('Lavabo', '🚽'), ('Home Theater', '🎬'),
+                ('Cozinha', '🍳'), ('Espaço Gourmet', '🍖'), ('Perlato', '🏠'),
+                ('Jardim / Piscina', '🏊'), ('Escritório', '💻'),
+                ('WC Subsolo', '🚿'), ('Depósito', '📦'), ('Dispensa', '🗄️'),
+                ('Garagem', '🚗'), ('Lavanderia', '👕'),
+                ('WC Secretária', '🚿'), ('Quarto Secretária', '🛏️'),
+                ('Casa Gerador', '⚡'), ('Fachada', '🏡')
             ]
             for nome, icone in comodos_padrao:
                 db_execute(conn, "INSERT INTO comodos (nome, icone) VALUES (?, ?)", (nome, icone))
