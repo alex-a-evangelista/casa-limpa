@@ -92,6 +92,7 @@ def init_db():
                     perfil TEXT NOT NULL UNIQUE,
                     senha_hash TEXT NOT NULL,
                     senha_temporaria INTEGER DEFAULT 1,
+                    papel TEXT DEFAULT 'morador',
                     criado_em TIMESTAMP DEFAULT NOW()
                 )
             ''')
@@ -155,6 +156,7 @@ def init_db():
                     perfil TEXT NOT NULL UNIQUE,
                     senha_hash TEXT NOT NULL,
                     senha_temporaria INTEGER DEFAULT 1,
+                    papel TEXT DEFAULT 'morador',
                     criado_em TEXT DEFAULT (datetime('now', 'localtime'))
                 );
                 CREATE TABLE IF NOT EXISTS comodos (
@@ -205,14 +207,40 @@ def init_db():
                 );
             ''')
 
+        # Migração: adicionar coluna 'papel' se não existir
+        try:
+            if DATABASE_URL:
+                cur = conn.cursor()
+                cur.execute("ALTER TABLE usuarios ADD COLUMN papel TEXT DEFAULT 'morador'")
+                conn.commit()
+            else:
+                conn.execute("ALTER TABLE usuarios ADD COLUMN papel TEXT DEFAULT 'morador'")
+                conn.commit()
+        except:
+            # Coluna já existe, continuar normalmente
+            pass
+
         # Criar usuários padrão com senha 1234 se não existirem
         row = db_fetchone(conn, "SELECT COUNT(*) as total FROM usuarios")
+        # Migração: de 2 usuários (patrao/empregada) para 5 individuais
+        if row['total'] == 2:
+            antigos = db_fetchall(conn, "SELECT perfil FROM usuarios")
+            nomes = [r['perfil'] for r in antigos]
+            if 'patrao' in nomes and 'empregada' in nomes:
+                db_execute(conn, "DELETE FROM usuarios")
+                conn.commit()
+                row = {'total': 0}
+
         if row['total'] == 0:
             hash_inicial = hash_senha(SENHA_INICIAL)
-            db_execute(conn, "INSERT INTO usuarios (perfil, senha_hash, senha_temporaria) VALUES (?, ?, 1)",
-                       ('patrao', hash_inicial))
-            db_execute(conn, "INSERT INTO usuarios (perfil, senha_hash, senha_temporaria) VALUES (?, ?, 1)",
-                       ('empregada', hash_inicial))
+            usuarios = [
+                ('alexandre', 'morador'), ('suzana', 'morador'),
+                ('duda', 'morador'), ('leo', 'morador'),
+                ('solange', 'empregada')
+            ]
+            for perfil, papel in usuarios:
+                db_execute(conn, "INSERT INTO usuarios (perfil, senha_hash, senha_temporaria, papel) VALUES (?, ?, 1, ?)",
+                           (perfil, hash_inicial, papel))
             conn.commit()
 
         # Inserir cômodos padrão se tabela vazia
@@ -274,9 +302,6 @@ def login():
     perfil = data.get('perfil', '').lower().strip()
     senha = data.get('senha', '')
 
-    if perfil not in ('patrao', 'empregada'):
-        return jsonify({'erro': 'Perfil inválido'}), 400
-
     conn = get_db()
     try:
         usuario = db_fetchone(conn, "SELECT * FROM usuarios WHERE perfil = ?", (perfil,))
@@ -284,12 +309,14 @@ def login():
             return jsonify({'erro': 'Senha incorreta'}), 401
 
         session['perfil'] = perfil
+        session['papel'] = usuario.get('papel', 'morador')
         session['usuario_id'] = usuario['id']
         session.permanent = True
 
         return jsonify({
             'ok': True,
             'perfil': perfil,
+            'papel': usuario.get('papel', 'morador'),
             'trocar_senha': usuario['senha_temporaria'] == 1
         })
     finally:
@@ -335,11 +362,12 @@ def auth_status():
     if 'perfil' in session:
         conn = get_db()
         try:
-            usuario = db_fetchone(conn, "SELECT senha_temporaria FROM usuarios WHERE perfil = ?",
+            usuario = db_fetchone(conn, "SELECT senha_temporaria, papel FROM usuarios WHERE perfil = ?",
                                   (session['perfil'],))
             return jsonify({
                 'logado': True,
                 'perfil': session['perfil'],
+                'papel': usuario.get('papel', 'morador') if usuario else 'morador',
                 'trocar_senha': usuario['senha_temporaria'] == 1 if usuario else False
             })
         finally:

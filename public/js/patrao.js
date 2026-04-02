@@ -10,13 +10,19 @@ async function verificarAuth() {
     try {
         const res = await fetch('/api/auth/status');
         const data = await res.json();
-        if (!data.logado || data.perfil !== 'patrao') {
+        if (!data.logado || data.papel !== 'morador') {
             window.location.href = '/';
             return false;
         }
         if (data.trocar_senha) {
             window.location.href = '/';
             return false;
+        }
+        // Mostrar nome do morador no header
+        const nomes = {alexandre:'Alexandre', suzana:'Suzana', duda:'Duda', leo:'Léo'};
+        const header = document.querySelector('.app-header h1');
+        if (header && nomes[data.perfil]) {
+            header.textContent = '🏠 ' + nomes[data.perfil];
         }
         return true;
     } catch(e) {

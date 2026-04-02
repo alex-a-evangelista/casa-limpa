@@ -3,7 +3,7 @@ async function verificarAuth() {
     try {
         const res = await fetch('/api/auth/status');
         const data = await res.json();
-        if (!data.logado || data.perfil !== 'empregada') {
+        if (!data.logado || data.papel !== 'empregada') {
             window.location.href = '/';
             return false;
         }
