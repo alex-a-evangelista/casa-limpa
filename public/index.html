@@ -20,32 +20,47 @@
                 <p class="role-label">Quem é você?</p>
 
                 <div class="profiles-grid">
-                    <div class="profile-card morador" onclick="escolherPerfil('alexandre')">
-                        <div class="profile-icon">👨</div>
+                    <div class="profile-card morador" onclick="escolherPerfil('alexandre')" data-perfil="alexandre">
+                        <div class="profile-avatar">
+                            <img class="avatar-img" src="" alt="Alexandre" onerror="this.style.display='none'">
+                            <div class="avatar-icon">👨</div>
+                        </div>
                         <div class="profile-name">Alexandre</div>
                         <div class="profile-role">Morador</div>
                     </div>
 
-                    <div class="profile-card morador" onclick="escolherPerfil('suzana')">
-                        <div class="profile-icon">👩</div>
+                    <div class="profile-card morador" onclick="escolherPerfil('suzana')" data-perfil="suzana">
+                        <div class="profile-avatar">
+                            <img class="avatar-img" src="" alt="Suzana" onerror="this.style.display='none'">
+                            <div class="avatar-icon">👩</div>
+                        </div>
                         <div class="profile-name">Suzana</div>
                         <div class="profile-role">Moradora</div>
                     </div>
 
-                    <div class="profile-card morador" onclick="escolherPerfil('duda')">
-                        <div class="profile-icon">👧</div>
+                    <div class="profile-card morador" onclick="escolherPerfil('duda')" data-perfil="duda">
+                        <div class="profile-avatar">
+                            <img class="avatar-img" src="" alt="Duda" onerror="this.style.display='none'">
+                            <div class="avatar-icon">👧</div>
+                        </div>
                         <div class="profile-name">Duda</div>
                         <div class="profile-role">Moradora</div>
                     </div>
 
-                    <div class="profile-card morador" onclick="escolherPerfil('leo')">
-                        <div class="profile-icon">👦</div>
+                    <div class="profile-card morador" onclick="escolherPerfil('leo')" data-perfil="leo">
+                        <div class="profile-avatar">
+                            <img class="avatar-img" src="" alt="Léo" onerror="this.style.display='none'">
+                            <div class="avatar-icon">👦</div>
+                        </div>
                         <div class="profile-name">Léo</div>
                         <div class="profile-role">Morador</div>
                     </div>
 
-                    <div class="profile-card empregada" onclick="escolherPerfil('solange')">
-                        <div class="profile-icon">🧹</div>
+                    <div class="profile-card empregada" onclick="escolherPerfil('solange')" data-perfil="solange">
+                        <div class="profile-avatar">
+                            <img class="avatar-img" src="" alt="Solange" onerror="this.style.display='none'">
+                            <div class="avatar-icon">🧹</div>
+                        </div>
                         <div class="profile-name">Solange</div>
                         <div class="profile-role">Empregada</div>
                     </div>
@@ -53,28 +68,68 @@
             </div>
         </div>
 
-        <!-- Tela 2: Login com senha -->
+        <!-- Tela 2: Login com câmera ou senha (DUAL) -->
         <div class="welcome-screen hidden" id="telaLogin">
-            <div class="logo" id="loginIcon">🔒</div>
-            <h1 id="loginTitulo">Entrar</h1>
-            <p class="subtitle" id="loginSubtitulo"></p>
+            <div class="login-header">
+                <div class="login-avatar" id="loginAvatar">
+                    <img id="loginAvatarImg" src="" alt="" style="display:none">
+                    <div id="loginAvatarIcon">🔒</div>
+                </div>
+                <h1 id="loginTitulo">Entrar</h1>
+            </div>
 
-            <div class="role-selection" style="max-width:320px">
-                <div id="loginErro" class="lembrete-card hidden" style="border-left-color:var(--danger);background:var(--danger-bg);margin-bottom:1rem">
-                    <div class="lembrete-msg" id="loginErroMsg"></div>
+            <div class="login-tabs">
+                <button class="login-tab active" onclick="mudarAbaLogin('camera')" id="tabCamera">
+                    📷 Rosto
+                </button>
+                <button class="login-tab" onclick="mudarAbaLogin('senha')" id="tabSenha">
+                    🔐 Senha
+                </button>
+            </div>
+
+            <!-- ABA 1: Câmera -->
+            <div class="login-content" id="abaCamera">
+                <div id="loginErroCamera" class="lembrete-card hidden" style="border-left-color:var(--danger);background:var(--danger-bg);margin:1rem;">
+                    <div class="lembrete-msg" id="loginErroMsgCamera"></div>
                 </div>
 
-                <div class="form-group">
+                <div style="text-align:center;padding:1rem;background:rgba(255,255,255,0.1);border-radius:12px;margin:1rem;">
+                    <video id="cameraPreview" width="300" height="300" style="border-radius:8px;max-width:100%;display:none;background:black;"></video>
+                    <div id="cameraPlaceholder" style="color:white;padding:2rem;font-size:3rem;">📷</div>
+                </div>
+
+                <div style="padding:0 1rem;">
+                    <button class="btn btn-primary btn-block" id="btnIniciarCamera" onclick="iniciarCamera()" style="background:white;color:var(--primary);margin-bottom:0.5rem;">
+                        Iniciar Câmera
+                    </button>
+                    <button class="btn btn-primary btn-block hidden" id="btnCapturarRosto" onclick="capturarRosto()" style="background:#10b981;color:white;">
+                        ✓ Verificar Rosto
+                    </button>
+                    <button class="btn btn-block mt-1" onclick="pararCamera()" style="color:white;background:transparent;border:1px solid rgba(255,255,255,0.3);">
+                        ← Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <!-- ABA 2: Senha -->
+            <div class="login-content hidden" id="abaSenha">
+                <div id="loginErroSenha" class="lembrete-card hidden" style="border-left-color:var(--danger);background:var(--danger-bg);margin-bottom:1rem;">
+                    <div class="lembrete-msg" id="loginErroMsgSenha"></div>
+                </div>
+
+                <div class="form-group" style="padding:0 1rem;">
                     <label style="color:white">Senha</label>
                     <input type="password" class="form-control" id="loginSenha" placeholder="Digite sua senha"
                            onkeydown="if(event.key==='Enter')fazerLogin()" autofocus>
                 </div>
-                <button class="btn btn-primary btn-block" onclick="fazerLogin()" style="background:white;color:var(--primary)">
-                    Entrar
-                </button>
-                <button class="btn btn-block mt-1" onclick="voltarEscolha()" style="color:white;background:transparent;border:1px solid rgba(255,255,255,0.3)">
-                    ← Voltar
-                </button>
+                <div style="padding:0 1rem;">
+                    <button class="btn btn-primary btn-block" onclick="fazerLogin()" style="background:white;color:var(--primary);">
+                        Entrar
+                    </button>
+                    <button class="btn btn-block mt-1" onclick="voltarEscolha()" style="color:white;background:transparent;border:1px solid rgba(255,255,255,0.3);">
+                        ← Voltar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -113,8 +168,26 @@
         let perfilEscolhido = '';
         let senhaDigitada = '';
 
-        // Verificar se já está logado
+        // Verificar se já está logado e carregar fotos dos usuários
         document.addEventListener('DOMContentLoaded', async () => {
+            // Carregar fotos de todos os usuários para os cards
+            const perfis = ['alexandre', 'suzana', 'duda', 'leo', 'solange'];
+            for (const perfil of perfis) {
+                try {
+                    const res = await fetch(`/api/usuarios/${perfil}`);
+                    const data = await res.json();
+                    if (data.foto) {
+                        const card = document.querySelector(`[data-perfil="${perfil}"]`);
+                        if (card) {
+                            const img = card.querySelector('.avatar-img');
+                            img.src = data.foto;
+                            img.style.display = 'block';
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // Verificar autenticação
             try {
                 const res = await fetch('/api/auth/status');
                 const data = await res.json();
@@ -146,13 +219,35 @@
                 'solange': { nome: 'Solange', icone: '🧹' }
             };
             const info = nomes[perfil] || { nome: perfil, icone: '🏠' };
-            document.getElementById('loginIcon').textContent = info.icone;
+
+            // Atualizar header
             document.getElementById('loginTitulo').textContent = info.nome;
-            document.getElementById('loginSubtitulo').textContent = 'Digite sua senha para entrar';
+            document.getElementById('loginAvatarIcon').textContent = info.icone;
+
+            // Carregar foto do usuário
+            fetch(`/api/usuarios/${perfil}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.foto) {
+                        const img = document.getElementById('loginAvatarImg');
+                        img.src = data.foto;
+                        img.style.display = 'block';
+                        document.getElementById('loginAvatarIcon').style.display = 'none';
+                    }
+                })
+                .catch(() => {});
+
+            // Limpar erros e campos
             document.getElementById('loginSenha').value = '';
-            document.getElementById('loginErro').classList.add('hidden');
+            document.getElementById('loginErroCamera').classList.add('hidden');
+            document.getElementById('loginErroSenha').classList.add('hidden');
+            document.getElementById('cameraPreview').style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'block';
+            document.getElementById('btnIniciarCamera').classList.remove('hidden');
+            document.getElementById('btnCapturarRosto').classList.add('hidden');
+
             mostrarTela('telaLogin');
-            setTimeout(() => document.getElementById('loginSenha').focus(), 300);
+            mudarAbaLogin('camera');
         }
 
         function voltarEscolha() {
@@ -236,6 +331,85 @@
             document.getElementById('trocarErroMsg').textContent = msg;
             document.getElementById('trocarErro').classList.remove('hidden');
         }
+
+        // ─── Funções de câmera para reconhecimento facial ───
+        let streamCamera = null;
+
+        function mudarAbaLogin(aba) {
+            // Atualizar abas
+            document.getElementById('tabCamera').classList.toggle('active', aba === 'camera');
+            document.getElementById('tabSenha').classList.toggle('active', aba === 'senha');
+            document.getElementById('abaCamera').classList.toggle('hidden', aba !== 'camera');
+            document.getElementById('abaSenha').classList.toggle('hidden', aba !== 'senha');
+
+            if (aba === 'camera') {
+                // Focar no campo de senha se mudar para senha
+                setTimeout(() => document.getElementById('loginSenha').focus(), 300);
+            }
+        }
+
+        async function iniciarCamera() {
+            try {
+                document.getElementById('btnIniciarCamera').disabled = true;
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 320 } }
+                });
+                streamCamera = stream;
+                const video = document.getElementById('cameraPreview');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                document.getElementById('btnCapturarRosto').classList.remove('hidden');
+                document.getElementById('btnIniciarCamera').classList.add('hidden');
+            } catch (err) {
+                document.getElementById('loginErroMsgCamera').textContent = 'Câmera não disponível. Use a senha.';
+                document.getElementById('loginErroCamera').classList.remove('hidden');
+                mudarAbaLogin('senha');
+                document.getElementById('btnIniciarCamera').disabled = false;
+            }
+        }
+
+        function pararCamera() {
+            if (streamCamera) {
+                streamCamera.getTracks().forEach(t => t.stop());
+                streamCamera = null;
+            }
+            document.getElementById('cameraPreview').style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'block';
+            document.getElementById('btnCapturarRosto').classList.add('hidden');
+            document.getElementById('btnIniciarCamera').classList.remove('hidden');
+            document.getElementById('btnIniciarCamera').disabled = false;
+            voltarEscolha();
+        }
+
+        async function capturarRosto() {
+            if (!streamCamera) return;
+
+            // Por agora, mostrar um placeholder de reconhecimento
+            // A implementação completa com face-api.js será adicionada depois
+            document.getElementById('btnCapturarRosto').disabled = true;
+            document.getElementById('btnCapturarRosto').textContent = '⏳ Analisando...';
+
+            // Simular análise
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Fallback para senha por enquanto
+            document.getElementById('loginErroMsgCamera').textContent = 'Reconhecimento facial será habilitado em breve. Use a senha por enquanto.';
+            document.getElementById('loginErroCamera').classList.remove('hidden');
+
+            document.getElementById('btnCapturarRosto').disabled = false;
+            document.getElementById('btnCapturarRosto').textContent = '✓ Verificar Rosto';
+
+            mudarAbaLogin('senha');
+        }
+
+        function voltarEscolha() {
+            pararCamera();
+            mostrarTela('telaEscolha');
+        }
     </script>
+
+    <!-- Carregar face-api.js para reconhecimento facial (será usado depois) -->
+    <script async defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </body>
 </html>

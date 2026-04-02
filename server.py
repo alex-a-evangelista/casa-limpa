@@ -2,6 +2,7 @@
 """Casa Limpa - Gerenciador de Atividades Domésticas"""
 
 import os
+import json
 import base64
 import hashlib
 import secrets
@@ -220,6 +221,32 @@ def init_db():
             # Coluna já existe, continuar normalmente
             pass
 
+        # Migração: adicionar coluna 'foto' se não existir
+        try:
+            if DATABASE_URL:
+                cur = conn.cursor()
+                cur.execute("ALTER TABLE usuarios ADD COLUMN foto TEXT DEFAULT ''")
+                conn.commit()
+            else:
+                conn.execute("ALTER TABLE usuarios ADD COLUMN foto TEXT DEFAULT ''")
+                conn.commit()
+        except:
+            # Coluna já existe, continuar normalmente
+            pass
+
+        # Migração: adicionar coluna 'foto_descritores' se não existir
+        try:
+            if DATABASE_URL:
+                cur = conn.cursor()
+                cur.execute("ALTER TABLE usuarios ADD COLUMN foto_descritores TEXT DEFAULT ''")
+                conn.commit()
+            else:
+                conn.execute("ALTER TABLE usuarios ADD COLUMN foto_descritores TEXT DEFAULT ''")
+                conn.commit()
+        except:
+            # Coluna já existe, continuar normalmente
+            pass
+
         # Criar usuários padrão com senha 1234 se não existirem
         row = db_fetchone(conn, "SELECT COUNT(*) as total FROM usuarios")
         # Migração: de 2 usuários (patrao/empregada) para 5 individuais
@@ -362,17 +389,81 @@ def auth_status():
     if 'perfil' in session:
         conn = get_db()
         try:
-            usuario = db_fetchone(conn, "SELECT senha_temporaria, papel FROM usuarios WHERE perfil = ?",
+            usuario = db_fetchone(conn, "SELECT senha_temporaria, papel, foto FROM usuarios WHERE perfil = ?",
                                   (session['perfil'],))
             return jsonify({
                 'logado': True,
                 'perfil': session['perfil'],
                 'papel': usuario.get('papel', 'morador') if usuario else 'morador',
+                'foto': usuario.get('foto', '') if usuario else '',
                 'trocar_senha': usuario['senha_temporaria'] == 1 if usuario else False
             })
         finally:
             conn.close()
     return jsonify({'logado': False})
+
+
+@app.route('/api/usuarios/<perfil>', methods=['GET'])
+def get_usuario(perfil):
+    """Retorna informações do usuário (nome, foto) para exibição nos cards"""
+    conn = get_db()
+    try:
+        usuario = db_fetchone(conn, "SELECT perfil, papel, foto FROM usuarios WHERE perfil = ?",
+                              (perfil,))
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+        return jsonify({
+            'perfil': usuario['perfil'],
+            'papel': usuario.get('papel', 'morador'),
+            'foto': usuario.get('foto', '')
+        })
+    finally:
+        conn.close()
+
+
+@app.route('/api/perfil/foto', methods=['POST'])
+@login_requerido
+def upload_foto():
+    """Faz upload da foto de perfil do usuário logado"""
+    if 'foto' not in request.files:
+        return jsonify({'erro': 'Nenhuma foto enviada'}), 400
+
+    arquivo = request.files['foto']
+    if arquivo.filename == '':
+        return jsonify({'erro': 'Arquivo vazio'}), 400
+
+    # Converter foto para base64
+    foto_b64 = salvar_foto_base64(arquivo)
+
+    # Atualizar no banco
+    conn = get_db()
+    try:
+        db_execute(conn, "UPDATE usuarios SET foto = ? WHERE perfil = ?",
+                   (foto_b64, session.get('perfil')))
+        conn.commit()
+        return jsonify({'ok': True, 'mensagem': 'Foto atualizada com sucesso'})
+    finally:
+        conn.close()
+
+
+@app.route('/api/perfil/descritores', methods=['POST'])
+@login_requerido
+def salvar_descritores():
+    """Salva os descritores faciais para reconhecimento via face-api.js"""
+    dados = request.get_json()
+    if not dados or 'descritores' not in dados:
+        return jsonify({'erro': 'Descritores não fornecidos'}), 400
+
+    descritores_json = json.dumps(dados['descritores'])
+
+    conn = get_db()
+    try:
+        db_execute(conn, "UPDATE usuarios SET foto_descritores = ? WHERE perfil = ?",
+                   (descritores_json, session.get('perfil')))
+        conn.commit()
+        return jsonify({'ok': True, 'mensagem': 'Descritores salvos com sucesso'})
+    finally:
+        conn.close()
 
 
 # ─── Rotas de páginas ───────────────────────────────────────────
